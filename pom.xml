@@ -13,7 +13,7 @@
 	</parent>
 
 	<groupId>com.example</groupId>
-	<artifactId>TP_4_auth_master_key</artifactId>
+	<artifactId>TP_5_Docker</artifactId>
 	<version>3.0.1-SNAPSHOT</version>
 	<name>TP_4_auth_master_key</name>
 	<description>TP 4 Authentification et Master Key</description>

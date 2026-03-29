@@ -15,15 +15,17 @@
 	<groupId>com.example</groupId>
 	<artifactId>TP_5_Docker</artifactId>
 	<version>3.0.1-SNAPSHOT</version>
-	<name>TP_4_auth_master_key</name>
-	<description>TP 4 Authentification et Master Key</description>
+	<name>TP_5_Docker</name>
+	<description>TP 5 Dockerisation d'une application Spring Boot securisee</description>
 
 	<properties>
 		<java.version>17</java.version>
+
 		<sonar.organization>nirina2108</sonar.organization>
-		<sonar.projectKey>nirina2108_TP_4_auth_master_key</sonar.projectKey>
+		<sonar.projectKey>nirina2108_TP_5_Docker</sonar.projectKey>
 		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 		<sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+
 		<sonar.coverage.exclusions>
 			**/client/**,
 			**/ui/**,
@@ -119,7 +121,7 @@
 
 					<execution>
 						<id>report</id>
-						<phase>test</phase>
+						<phase>verify</phase>
 						<goals>
 							<goal>report</goal>
 						</goals>

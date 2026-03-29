@@ -1,64 +1,115 @@
-# TP_2 - Authentification fragile
+# TP_5 – Dockerisation d’une application Spring Boot sécurisée
 
-## Objectif
+## Description
 
-Ce projet correspond au TP_2 du module d'authentification.
+Ce projet correspond au TP_5 du module d’authentification.
+Il consiste à dockeriser une application Spring Boot sécurisée développée dans les TP précédents.
 
-L'objectif est d'améliorer la version précédente en ajoutant :
+L’application implémente une authentification forte basée sur HMAC avec :
+- gestion des utilisateurs
+- protection contre les attaques replay (nonce + timestamp)
+- génération de token d’accès
 
-- une politique de mot de passe plus stricte
-- un stockage serveur correct avec hash adaptatif
-- un mécanisme anti brute force
-- une première démarche qualité avec SonarCloud
+---
 
-## Pourquoi cette authentification reste fragile
+## Architecture
 
-Même si le mot de passe n'est plus stocké en clair en base, l'authentification reste encore fragile.
+[ Client (Postman) ]
+        ↓
+[ Spring Boot (Docker) ]
+        ↓
+[ MySQL (Docker) ]
 
-La phase de connexion repose toujours sur une information directement dérivée de la saisie utilisateur.
-Si un attaquant capture une requête de login, il peut tenter de la rejouer.
+---
 
-Cette faiblesse sera corrigée dans les prochains TPs avec une clé secrète partagée et un mécanisme anti-rejeu.
+## Technologies utilisées
 
-## Étapes prévues dans TP2
+- Java 17
+- Spring Boot 3
+- Spring Data JPA
+- MySQL 8
+- Docker
+- Docker Compose
 
-- Étape 0 : démarrage TP2
-- Étape 1 : migration base vers password_hash
-- Étape 2 : politique de mot de passe
-- Étape 3 : hash BCrypt
-- Étape 4 : anti brute force
-- Étape 5 : indicateur de force côté client
-- Étape 6 : SonarCloud
-- Étape 7 : finalisation avec JavaDoc et tests
+---
 
-## Technologies
+## Lancement du projet
 
-- Java
-- Spring Boot
-- Maven
-- JPA / Hibernate
-- Base de données MySQL
-- JUnit
-- SonarCloud
-## Qualité du code
+### Prérequis
 
-Le projet a été analysé avec SonarCloud.
+- Docker Desktop installé
+- WSL2 activé
 
-Résultat :
-- Quality Gate : PASSED
-- Security : A
-- Reliability : A
-- Maintainability : A
+### Lancer
 
-Les principaux problèmes restants sont des code smells mineurs.
-Ils n’impactent pas la sécurité ni le fonctionnement du système.
+docker compose up --build
 
-La couverture de test n’est pas encore mesurée via Jacoco (0% affiché),
-mais des tests unitaires sont bien présents et fonctionnels.
+---
 
-Conclusion :
-Le projet respecte les exigences de qualité du TP2.
+## Fonctionnement de l’authentification
+
+### 1. Inscription
+
+POST /api/auth/register
+
+{
+  "name": "Poun",
+  "email": "poun@gmail.com",
+  "password": "Poun_123456789_@@@@@"
+}
+
+---
+
+### 2. Génération HMAC
+
+POST /api/auth/client-proof
+
+Réponse :
+- nonce
+- timestamp
+- message
+- hmac
+
+---
+
+### 3. Login sécurisé
+
+POST /api/auth/login
+
+{
+  "email": "...",
+  "nonce": "...",
+  "timestamp": ...,
+  "hmac": "..."
+}
+
+---
+
+### 4. Route protégée
+
+GET /api/auth/me
+Authorization: Bearer TOKEN
+
+---
+
+## Commandes utiles
+
+docker compose up --build
+docker ps
+docker logs tp5_app
+docker compose down
+
+---
+
+## Résultat
+
+- API fonctionnelle
+- MySQL connecté
+- Authentification HMAC opérationnelle
+- Docker opérationnel
+
+---
 
 ## Auteur
 
-Poun
+Poun Razafy

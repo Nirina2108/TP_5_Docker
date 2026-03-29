@@ -1,199 +1,406 @@
 package com.example.auth.client;
 
-import com.example.auth.validator.PasswordStrengthUtil;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.application.Application;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
-import javafx.scene.control.Separator;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
 /**
- * Interface JavaFX simple pour tester l'authentification.
+ * Interface JavaFX simple pour tester l'API d'authentification du TP_5.
+ *
+ * Cette interface permet de :
+ * - inscrire un utilisateur
+ * - demander une preuve client HMAC
+ * - effectuer le login sécurisé
+ * - récupérer le profil avec /me
+ * - effectuer le logout
+ *
+ * Le backend doit être lancé sur le port 8000.
  *
  * @author Poun
- * @version 2.5
+ * @version 5.1
  */
 public class AuthClientUI extends Application {
 
-    private TextField registerNameField;
-    private TextField registerEmailField;
-    private PasswordField registerPasswordField;
-    private PasswordField registerConfirmPasswordField;
-    private Label passwordStatusLabel;
-    private Label registerMessageLabel;
+    /**
+     * URL de base de l'API.
+     */
+    private static final String BASE_URL = "http://127.0.0.1:8000/api/auth";
 
-    private TextField loginEmailField;
-    private PasswordField loginPasswordField;
-    private Label loginMessageLabel;
+    /**
+     * Client HTTP Java.
+     */
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
-    private final PasswordStrengthUtil passwordStrengthUtil = new PasswordStrengthUtil();
+    /**
+     * Convertisseur JSON.
+     */
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * Champ nom.
+     */
+    private final TextField nameField = new TextField();
+
+    /**
+     * Champ email.
+     */
+    private final TextField emailField = new TextField();
+
+    /**
+     * Champ mot de passe.
+     */
+    private final PasswordField passwordField = new PasswordField();
+
+    /**
+     * Champ nonce retourné par /client-proof.
+     */
+    private final TextField nonceField = new TextField();
+
+    /**
+     * Champ timestamp retourné par /client-proof.
+     */
+    private final TextField timestampField = new TextField();
+
+    /**
+     * Champ hmac retourné par /client-proof.
+     */
+    private final TextField hmacField = new TextField();
+
+    /**
+     * Champ token retourné par /login.
+     */
+    private final TextField tokenField = new TextField();
+
+    /**
+     * Zone d'affichage des réponses.
+     */
+    private final TextArea resultArea = new TextArea();
+
+    /**
+     * Point d'entrée JavaFX.
+     *
+     * @param stage fenêtre principale
+     */
     @Override
     public void start(Stage stage) {
-        Label titleLabel = new Label("TP2 - Authentification fragile");
-        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        nameField.setPromptText("Nom");
+        emailField.setPromptText("Email");
+        passwordField.setPromptText("Mot de passe");
 
-        Label registerTitle = new Label("Inscription");
-        registerTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        nonceField.setPromptText("Nonce");
+        timestampField.setPromptText("Timestamp");
+        hmacField.setPromptText("HMAC");
+        tokenField.setPromptText("Access Token");
 
-        registerNameField = new TextField();
-        registerNameField.setPromptText("Nom");
+        nonceField.setEditable(false);
+        timestampField.setEditable(false);
+        hmacField.setEditable(false);
 
-        registerEmailField = new TextField();
-        registerEmailField.setPromptText("Email");
+        resultArea.setEditable(false);
+        resultArea.setPrefHeight(260);
 
-        registerPasswordField = new PasswordField();
-        registerPasswordField.setPromptText("Mot de passe");
+        Button registerButton = new Button("Register");
+        Button proofButton = new Button("Client Proof");
+        Button loginButton = new Button("Login");
+        Button meButton = new Button("/me");
+        Button logoutButton = new Button("Logout");
+        Button clearButton = new Button("Clear");
 
-        registerConfirmPasswordField = new PasswordField();
-        registerConfirmPasswordField.setPromptText("Confirmer le mot de passe");
+        registerButton.setOnAction(e -> register());
+        proofButton.setOnAction(e -> generateClientProof());
+        loginButton.setOnAction(e -> login());
+        meButton.setOnAction(e -> getMe());
+        logoutButton.setOnAction(e -> logout());
+        clearButton.setOnAction(e -> clearFields());
 
-        passwordStatusLabel = new Label("Saisissez un mot de passe");
-        passwordStatusLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(15));
 
-        registerMessageLabel = new Label();
+        grid.add(new Label("Nom :"), 0, 0);
+        grid.add(nameField, 1, 0);
 
-        Button registerButton = new Button("S'inscrire");
-        registerButton.setMaxWidth(Double.MAX_VALUE);
-        registerButton.setOnAction(event -> handleRegister());
+        grid.add(new Label("Email :"), 0, 1);
+        grid.add(emailField, 1, 1);
 
-        registerPasswordField.textProperty().addListener((observable, oldValue, newValue) -> updatePasswordIndicator());
-        registerConfirmPasswordField.textProperty().addListener((observable, oldValue, newValue) -> updatePasswordIndicator());
+        grid.add(new Label("Mot de passe :"), 0, 2);
+        grid.add(passwordField, 1, 2);
 
-        Label loginTitle = new Label("Connexion");
-        loginTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        grid.add(new Label("Nonce :"), 0, 3);
+        grid.add(nonceField, 1, 3);
 
-        loginEmailField = new TextField();
-        loginEmailField.setPromptText("Email");
+        grid.add(new Label("Timestamp :"), 0, 4);
+        grid.add(timestampField, 1, 4);
 
-        loginPasswordField = new PasswordField();
-        loginPasswordField.setPromptText("Mot de passe");
+        grid.add(new Label("HMAC :"), 0, 5);
+        grid.add(hmacField, 1, 5);
 
-        loginMessageLabel = new Label();
+        grid.add(new Label("Token :"), 0, 6);
+        grid.add(tokenField, 1, 6);
 
-        Button loginButton = new Button("Se connecter");
-        loginButton.setMaxWidth(Double.MAX_VALUE);
-        loginButton.setOnAction(event -> handleLogin());
+        HBox buttonBox = new HBox(10, registerButton, proofButton, loginButton, meButton, logoutButton, clearButton);
+        grid.add(buttonBox, 0, 7, 2, 1);
 
-        VBox root = new VBox(10);
-        root.setPadding(new Insets(20));
-        root.setAlignment(Pos.TOP_CENTER);
+        grid.add(new Label("Résultat :"), 0, 8);
+        grid.add(resultArea, 0, 9, 2, 1);
 
-        root.getChildren().addAll(
-                titleLabel,
-                new Separator(),
-
-                registerTitle,
-                registerNameField,
-                registerEmailField,
-                registerPasswordField,
-                registerConfirmPasswordField,
-                passwordStatusLabel,
-                registerButton,
-                registerMessageLabel,
-
-                new Separator(),
-
-                loginTitle,
-                loginEmailField,
-                loginPasswordField,
-                loginButton,
-                loginMessageLabel
-        );
-
-        Scene scene = new Scene(root, 420, 520);
-
-        stage.setTitle("TP2 Auth Client");
+        Scene scene = new Scene(grid, 760, 560);
+        stage.setTitle("TP_5 - Interface de test Auth");
         stage.setScene(scene);
         stage.show();
     }
 
-    private void updatePasswordIndicator() {
-        String password = registerPasswordField.getText();
-        String confirmPassword = registerConfirmPasswordField.getText();
+    /**
+     * Envoie une requête d'inscription.
+     */
+    private void register() {
+        try {
+            String jsonBody = String.format(
+                    """
+                    {
+                      "name": "%s",
+                      "email": "%s",
+                      "password": "%s"
+                    }
+                    """,
+                    escapeJson(nameField.getText()),
+                    escapeJson(emailField.getText()),
+                    escapeJson(passwordField.getText())
+            );
 
-        String level = passwordStrengthUtil.evaluate(password);
-        String message = passwordStrengthUtil.getMessage(password, confirmPassword);
+            String response = sendPost(BASE_URL + "/register", jsonBody, null);
+            resultArea.setText("REGISTER\n\n" + prettyJson(response));
 
-        passwordStatusLabel.setText(message);
-
-        if (!passwordStrengthUtil.isPolicyValid(password)) {
-            passwordStatusLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
-            return;
-        }
-
-        if (!passwordStrengthUtil.passwordsMatch(password, confirmPassword)) {
-            passwordStatusLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
-            return;
-        }
-
-        if (PasswordStrengthUtil.GREEN.equals(level)) {
-            passwordStatusLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
-        } else {
-            passwordStatusLabel.setStyle("-fx-text-fill: orange; -fx-font-weight: bold;");
+        } catch (Exception e) {
+            resultArea.setText("Erreur register : " + e.getMessage());
         }
     }
 
-    private void handleRegister() {
-        String name = registerNameField.getText();
-        String email = registerEmailField.getText();
-        String password = registerPasswordField.getText();
-        String confirmPassword = registerConfirmPasswordField.getText();
+    /**
+     * Appelle /client-proof pour récupérer nonce, timestamp et hmac.
+     */
+    private void generateClientProof() {
+        try {
+            String jsonBody = String.format(
+                    """
+                    {
+                      "email": "%s",
+                      "password": "%s"
+                    }
+                    """,
+                    escapeJson(emailField.getText()),
+                    escapeJson(passwordField.getText())
+            );
 
-        if (name == null || name.isBlank()) {
-            registerMessageLabel.setText("Le nom est obligatoire.");
-            registerMessageLabel.setStyle("-fx-text-fill: red;");
-            return;
+            String response = sendPost(BASE_URL + "/client-proof", jsonBody, null);
+            JsonNode root = objectMapper.readTree(response);
+
+            nonceField.setText(readText(root, "nonce"));
+            timestampField.setText(readText(root, "timestamp"));
+            hmacField.setText(readText(root, "hmac"));
+
+            resultArea.setText("CLIENT-PROOF\n\n" + prettyJson(response));
+
+        } catch (Exception e) {
+            resultArea.setText("Erreur client-proof : " + e.getMessage());
         }
-
-        if (email == null || email.isBlank()) {
-            registerMessageLabel.setText("L'email est obligatoire.");
-            registerMessageLabel.setStyle("-fx-text-fill: red;");
-            return;
-        }
-
-        if (!passwordStrengthUtil.isPolicyValid(password)) {
-            registerMessageLabel.setText("Le mot de passe ne respecte pas les règles.");
-            registerMessageLabel.setStyle("-fx-text-fill: red;");
-            return;
-        }
-
-        if (!passwordStrengthUtil.passwordsMatch(password, confirmPassword)) {
-            registerMessageLabel.setText("La confirmation du mot de passe est différente.");
-            registerMessageLabel.setStyle("-fx-text-fill: red;");
-            return;
-        }
-
-        registerMessageLabel.setText("Formulaire valide. Inscription prête à être envoyée.");
-        registerMessageLabel.setStyle("-fx-text-fill: green;");
     }
 
-    private void handleLogin() {
-        String email = loginEmailField.getText();
-        String password = loginPasswordField.getText();
+    /**
+     * Envoie la requête de login HMAC.
+     */
+    private void login() {
+        try {
+            String jsonBody = String.format(
+                    """
+                    {
+                      "email": "%s",
+                      "nonce": "%s",
+                      "timestamp": %s,
+                      "hmac": "%s"
+                    }
+                    """,
+                    escapeJson(emailField.getText()),
+                    escapeJson(nonceField.getText()),
+                    timestampField.getText().isBlank() ? "0" : timestampField.getText(),
+                    escapeJson(hmacField.getText())
+            );
 
-        if (email == null || email.isBlank()) {
-            loginMessageLabel.setText("L'email est obligatoire.");
-            loginMessageLabel.setStyle("-fx-text-fill: red;");
-            return;
+            String response = sendPost(BASE_URL + "/login", jsonBody, null);
+            JsonNode root = objectMapper.readTree(response);
+
+            String token = readText(root, "accessToken");
+            tokenField.setText(token);
+
+            resultArea.setText("LOGIN\n\n" + prettyJson(response));
+
+        } catch (Exception e) {
+            resultArea.setText("Erreur login : " + e.getMessage());
         }
-
-        if (password == null || password.isBlank()) {
-            loginMessageLabel.setText("Le mot de passe est obligatoire.");
-            loginMessageLabel.setStyle("-fx-text-fill: red;");
-            return;
-        }
-
-        loginMessageLabel.setText("Connexion prête à être envoyée.");
-        loginMessageLabel.setStyle("-fx-text-fill: green;");
     }
 
+    /**
+     * Appelle l'endpoint /me avec le token Bearer.
+     */
+    private void getMe() {
+        try {
+            String token = tokenField.getText();
+
+            if (token == null || token.isBlank()) {
+                resultArea.setText("Token vide. Fais d'abord le login.");
+                return;
+            }
+
+            String response = sendGet(BASE_URL + "/me", token);
+            resultArea.setText("/ME\n\n" + prettyJson(response));
+
+        } catch (Exception e) {
+            resultArea.setText("Erreur /me : " + e.getMessage());
+        }
+    }
+
+    /**
+     * Appelle l'endpoint logout avec le token Bearer.
+     */
+    private void logout() {
+        try {
+            String token = tokenField.getText();
+
+            if (token == null || token.isBlank()) {
+                resultArea.setText("Token vide. Fais d'abord le login.");
+                return;
+            }
+
+            String response = sendPost(BASE_URL + "/logout", "{}", token);
+            resultArea.setText("LOGOUT\n\n" + prettyJson(response));
+
+        } catch (Exception e) {
+            resultArea.setText("Erreur logout : " + e.getMessage());
+        }
+    }
+
+    /**
+     * Vide quelques champs de sortie.
+     */
+    private void clearFields() {
+        nonceField.clear();
+        timestampField.clear();
+        hmacField.clear();
+        tokenField.clear();
+        resultArea.clear();
+    }
+
+    /**
+     * Envoie une requête POST JSON.
+     *
+     * @param url adresse cible
+     * @param jsonBody corps JSON
+     * @param token token Bearer éventuel
+     * @return corps de réponse uniquement
+     * @throws IOException erreur réseau
+     * @throws InterruptedException interruption
+     */
+    private String sendPost(String url, String jsonBody, String token) throws IOException, InterruptedException {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Content-Type", "application/json");
+
+        if (token != null && !token.isBlank()) {
+            builder.header("Authorization", "Bearer " + token);
+        }
+
+        HttpRequest request = builder
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        return response.body();
+    }
+
+    /**
+     * Envoie une requête GET.
+     *
+     * @param url adresse cible
+     * @param token token Bearer
+     * @return corps de réponse uniquement
+     * @throws IOException erreur réseau
+     * @throws InterruptedException interruption
+     */
+    private String sendGet(String url, String token) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Authorization", "Bearer " + token)
+                .GET()
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        return response.body();
+    }
+
+    /**
+     * Lit un champ JSON et le retourne sous forme texte.
+     *
+     * @param root objet JSON
+     * @param field nom du champ
+     * @return valeur texte ou chaîne vide
+     */
+    private String readText(JsonNode root, String field) {
+        JsonNode node = root.get(field);
+        return node == null ? "" : node.asText();
+    }
+
+    /**
+     * Formate un JSON pour l'affichage.
+     *
+     * @param rawJson json brut
+     * @return json indenté si possible
+     */
+    private String prettyJson(String rawJson) {
+        try {
+            Object json = objectMapper.readValue(rawJson, Object.class);
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(json);
+        } catch (Exception e) {
+            return rawJson;
+        }
+    }
+
+    /**
+     * Échappe simplement les guillemets dans une chaîne JSON.
+     *
+     * @param value texte source
+     * @return texte échappé
+     */
+    private String escapeJson(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    /**
+     * Point d'entrée principal.
+     *
+     * @param args arguments console
+     */
     public static void main(String[] args) {
         launch(args);
     }

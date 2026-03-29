@@ -13,4 +13,4 @@ RUN ./mvnw clean package -DskipTests
 
 EXPOSE 8000
 
-CMD ["java", "-jar", "target/TP_4_auth_master_key-4.0.0-SNAPSHOT.jar"]
+CMD ["java", "-jar", "target/TP_5_Docker-3.0.1-SNAPSHOT.jar"]

@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   mysql:
     image: mysql:8.0
@@ -22,9 +20,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/tp5_auth_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/tp5_auth_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      APP_SECURITY_SMK: tp5-secret-key-2026
 
 volumes:
   mysql_data:

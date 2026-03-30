@@ -1,115 +1,81 @@
-# TP_5 – Dockerisation d’une application Spring Boot sécurisée
+# TP_5 - Authentification sécurisée avec Docker, JavaFX et MySQL
 
-## Description
+## 1. Présentation du projet
 
-Ce projet correspond au TP_5 du module d’authentification.
-Il consiste à dockeriser une application Spring Boot sécurisée développée dans les TP précédents.
+Ce projet correspond au TP_5 de l'application d'authentification sécurisée réalisée en Java avec Spring Boot.
 
-L’application implémente une authentification forte basée sur HMAC avec :
-- gestion des utilisateurs
-- protection contre les attaques replay (nonce + timestamp)
-- génération de token d’accès
+L'objectif principal de cette version est de :
+- exécuter l'application avec Docker,
+- utiliser une base de données MySQL conteneurisée,
+- tester les fonctionnalités via une interface JavaFX,
+- conserver les améliorations de sécurité des TPs précédents,
+- visualiser les données utilisateurs dans MySQL et phpMyAdmin.
+
+Le projet reprend les fonctionnalités avancées des versions précédentes :
+- inscription utilisateur,
+- génération d'une preuve client,
+- authentification sécurisée avec HMAC,
+- récupération du profil connecté,
+- déconnexion,
+- indicateur visuel de force du mot de passe dans l'interface.
 
 ---
 
-## Architecture
-
-[ Client (Postman) ]
-        ↓
-[ Spring Boot (Docker) ]
-        ↓
-[ MySQL (Docker) ]
-
----
-
-## Technologies utilisées
+## 2. Technologies utilisées
 
 - Java 17
-- Spring Boot 3
+- Spring Boot
 - Spring Data JPA
 - MySQL 8
 - Docker
 - Docker Compose
+- JavaFX
+- Maven
 
 ---
 
-## Lancement du projet
+## 3. Fonctionnalités principales
 
-### Prérequis
+### Backend
+- API REST d'authentification
+- inscription d'un utilisateur
+- login sécurisé avec nonce, timestamp et HMAC
+- endpoint `/me`
+- endpoint `/logout`
 
-- Docker Desktop installé
-- WSL2 activé
+### Interface JavaFX
+- formulaire de test utilisateur
+- affichage des champs nécessaires à l'authentification
+- affichage des réponses JSON en bas de l'interface
+- indicateur de force du mot de passe :
+  - faible en rouge
+  - moyen en orange
+  - fort en vert
 
-### Lancer
-
-docker compose up --build
-
----
-
-## Fonctionnement de l’authentification
-
-### 1. Inscription
-
-POST /api/auth/register
-
-{
-  "name": "Poun",
-  "email": "poun@gmail.com",
-  "password": "Poun_123456789_@@@@@"
-}
+### Base de données
+- MySQL exécuté dans Docker
+- persistance des données via volume Docker
+- visualisation possible avec phpMyAdmin
 
 ---
 
-### 2. Génération HMAC
+## 4. Structure du projet
 
-POST /api/auth/client-proof
-
-Réponse :
-- nonce
-- timestamp
-- message
-- hmac
-
----
-
-### 3. Login sécurisé
-
-POST /api/auth/login
-
-{
-  "email": "...",
-  "nonce": "...",
-  "timestamp": ...,
-  "hmac": "..."
-}
-
----
-
-### 4. Route protégée
-
-GET /api/auth/me
-Authorization: Bearer TOKEN
-
----
-
-## Commandes utiles
-
-docker compose up --build
-docker ps
-docker logs tp5_app
-docker compose down
-
----
-
-## Résultat
-
-- API fonctionnelle
-- MySQL connecté
-- Authentification HMAC opérationnelle
-- Docker opérationnel
-
----
-
-## Auteur
-
-Poun Razafy
+```text
+src/
+ ├── main/
+ │   ├── java/com/example/auth/
+ │   │   ├── client/       -> interface JavaFX
+ │   │   ├── controller/   -> endpoints REST
+ │   │   ├── dto/          -> objets de requête/réponse
+ │   │   ├── entity/       -> entités JPA
+ │   │   ├── repository/   -> accès base de données
+ │   │   ├── service/      -> logique métier
+ │   │   └── AuthApplication.java
+ │   └── resources/
+ │       └── application.properties
+ ├── test/                 -> tests unitaires
+Dockerfile
+docker-compose.yml
+pom.xml
+README.md

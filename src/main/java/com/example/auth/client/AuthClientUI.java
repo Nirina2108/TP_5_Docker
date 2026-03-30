@@ -228,7 +228,7 @@ public class AuthClientUI extends Application {
         grid.add(tokenField, 1, 9);
 
         HBox buttonBox = new HBox(10, registerButton, proofButton, loginButton, meButton, logoutButton, clearButton);
-        grid.add(buttonBox, 0, 10, 2, 1);
+        grid.add(buttonBox, 0, cd10, 2, 1);
 
         grid.add(resultLabel, 0, 11);
         grid.add(resultArea, 0, 12, 2, 1);

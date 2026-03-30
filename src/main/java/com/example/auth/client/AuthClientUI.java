@@ -3,11 +3,13 @@ package com.example.auth.client;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
@@ -21,7 +23,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 /**
- * Interface JavaFX simple pour tester l'API d'authentification du TP_5.
+ * Interface JavaFX moderne pour tester l'API d'authentification du TP_5.
  *
  * Cette interface permet de :
  * - inscrire un utilisateur
@@ -29,11 +31,12 @@ import java.net.http.HttpResponse;
  * - effectuer le login sécurisé
  * - récupérer le profil avec /me
  * - effectuer le logout
+ * - changer le mot de passe
  *
  * Le backend doit être lancé sur le port 8000.
  *
  * @author Poun
- * @version 5.3
+ * @version 5.5
  */
 public class AuthClientUI extends Application {
 
@@ -93,6 +96,31 @@ public class AuthClientUI extends Application {
     private final TextField tokenField = new TextField();
 
     /**
+     * Champ ancien mot de passe.
+     */
+    private final PasswordField oldPasswordField = new PasswordField();
+
+    /**
+     * Champ nouveau mot de passe.
+     */
+    private final PasswordField newPasswordField = new PasswordField();
+
+    /**
+     * Champ confirmation nouveau mot de passe.
+     */
+    private final PasswordField confirmNewPasswordField = new PasswordField();
+
+    /**
+     * Label force nouveau mot de passe.
+     */
+    private final Label newPasswordStrengthLabel = new Label("Force du nouveau mot de passe : -");
+
+    /**
+     * Label confirmation nouveau mot de passe.
+     */
+    private final Label confirmNewPasswordLabel = new Label("Confirmation : -");
+
+    /**
      * Zone d'affichage des réponses.
      */
     private final TextArea resultArea = new TextArea();
@@ -113,6 +141,10 @@ public class AuthClientUI extends Application {
         hmacField.setPromptText("HMAC");
         tokenField.setPromptText("Access Token");
 
+        oldPasswordField.setPromptText("Ancien mot de passe");
+        newPasswordField.setPromptText("Nouveau mot de passe");
+        confirmNewPasswordField.setPromptText("Confirmer le nouveau mot de passe");
+
         nonceField.setEditable(false);
         timestampField.setEditable(false);
         hmacField.setEditable(false);
@@ -128,6 +160,9 @@ public class AuthClientUI extends Application {
         applyModernFieldStyle(timestampField);
         applyModernFieldStyle(hmacField);
         applyModernFieldStyle(tokenField);
+        applyModernFieldStyle(oldPasswordField);
+        applyModernFieldStyle(newPasswordField);
+        applyModernFieldStyle(confirmNewPasswordField);
 
         resultArea.setStyle(
                 "-fx-control-inner-background: #0f172a;" +
@@ -147,28 +182,60 @@ public class AuthClientUI extends Application {
                         "-fx-text-fill: #94a3b8;"
         );
 
-        passwordField.textProperty().addListener((observable, oldValue, newValue) -> updatePasswordStrength(newValue));
+        newPasswordStrengthLabel.setStyle(
+                "-fx-font-weight: bold;" +
+                        "-fx-font-size: 13px;" +
+                        "-fx-text-fill: #94a3b8;"
+        );
+
+        confirmNewPasswordLabel.setStyle(
+                "-fx-font-weight: bold;" +
+                        "-fx-font-size: 13px;" +
+                        "-fx-text-fill: #94a3b8;"
+        );
+
+        passwordField.textProperty().addListener((observable, oldValue, newValue) ->
+                updatePasswordStrength(newValue, passwordStrengthLabel, "Force du mot de passe : ")
+        );
+
+        newPasswordField.textProperty().addListener((observable, oldValue, newValue) -> {
+            updatePasswordStrength(newValue, newPasswordStrengthLabel, "Force du nouveau mot de passe : ");
+            updateNewPasswordConfirmation();
+        });
+
+        confirmNewPasswordField.textProperty().addListener((observable, oldValue, newValue) ->
+                updateNewPasswordConfirmation()
+        );
 
         Button registerButton = new Button("Register");
         Button proofButton = new Button("Client Proof");
         Button loginButton = new Button("Login");
         Button meButton = new Button("/me");
         Button logoutButton = new Button("Logout");
+        Button changePasswordButton = new Button("Change Password");
         Button clearButton = new Button("Clear");
+        Button closeButton = new Button("Close");
 
         applyModernButtonStyle(registerButton, "#2563eb");
         applyModernButtonStyle(proofButton, "#7c3aed");
         applyModernButtonStyle(loginButton, "#16a34a");
         applyModernButtonStyle(meButton, "#ea580c");
         applyModernButtonStyle(logoutButton, "#dc2626");
+        applyModernButtonStyle(changePasswordButton, "#0891b2");
         applyModernButtonStyle(clearButton, "#475569");
+        applyModernButtonStyle(closeButton, "#111827");
 
         registerButton.setOnAction(e -> register());
         proofButton.setOnAction(e -> generateClientProof());
         loginButton.setOnAction(e -> login());
         meButton.setOnAction(e -> getMe());
         logoutButton.setOnAction(e -> logout());
+        changePasswordButton.setOnAction(e -> changePassword());
         clearButton.setOnAction(e -> clearFields());
+        closeButton.setOnAction(e -> {
+            Platform.exit();
+            System.exit(0);
+        });
 
         GridPane grid = new GridPane();
         grid.setHgap(12);
@@ -186,7 +253,7 @@ public class AuthClientUI extends Application {
                         "-fx-text-fill: white;"
         );
 
-        Label subtitleLabel = new Label("Authentification sécurisée");
+        Label subtitleLabel = new Label("Authentification sécurisée + changement de mot de passe");
         subtitleLabel.setStyle(
                 "-fx-font-size: 13px;" +
                         "-fx-text-fill: #cbd5e1;"
@@ -199,6 +266,9 @@ public class AuthClientUI extends Application {
         Label timestampLabel = createStyledLabel("Timestamp :");
         Label hmacLabel = createStyledLabel("HMAC :");
         Label tokenLabel = createStyledLabel("Token :");
+        Label oldPasswordLabel = createStyledLabel("Ancien mot de passe :");
+        Label newPasswordLabel = createStyledLabel("Nouveau mot de passe :");
+        Label confirmNewPasswordTextLabel = createStyledLabel("Confirmation :");
         Label resultLabel = createStyledLabel("Résultat :");
 
         grid.add(titleLabel, 0, 0, 2, 1);
@@ -227,15 +297,54 @@ public class AuthClientUI extends Application {
         grid.add(tokenLabel, 0, 9);
         grid.add(tokenField, 1, 9);
 
-        HBox buttonBox = new HBox(10, registerButton, proofButton, loginButton, meButton, logoutButton, clearButton);
-        grid.add(buttonBox, 0, cd10, 2, 1);
+        grid.add(oldPasswordLabel, 0, 10);
+        grid.add(oldPasswordField, 1, 10);
 
-        grid.add(resultLabel, 0, 11);
-        grid.add(resultArea, 0, 12, 2, 1);
+        grid.add(newPasswordLabel, 0, 11);
+        grid.add(newPasswordField, 1, 11);
 
-        Scene scene = new Scene(grid, 820, 700);
+        grid.add(newPasswordStrengthLabel, 1, 12);
+
+        grid.add(confirmNewPasswordTextLabel, 0, 13);
+        grid.add(confirmNewPasswordField, 1, 13);
+
+        grid.add(confirmNewPasswordLabel, 1, 14);
+
+        HBox buttonBox = new HBox(
+                10,
+                registerButton,
+                proofButton,
+                loginButton,
+                meButton,
+                logoutButton,
+                changePasswordButton,
+                clearButton,
+                closeButton
+        );
+        grid.add(buttonBox, 0, 15, 2, 1);
+
+        grid.add(resultLabel, 0, 16);
+        grid.add(resultArea, 0, 17, 2, 1);
+
+        ScrollPane scrollPane = new ScrollPane(grid);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(false);
+        scrollPane.setPannable(true);
+        scrollPane.setStyle(
+                "-fx-background: #111827;" +
+                        "-fx-background-color: #111827;"
+        );
+
+        Scene scene = new Scene(scrollPane, 920, 720);
+
         stage.setTitle("TP_5 - Interface de test Auth");
         stage.setScene(scene);
+        stage.setMinWidth(950);
+        stage.setMinHeight(650);
+        stage.setOnCloseRequest(event -> {
+            Platform.exit();
+            System.exit(0);
+        });
         stage.show();
     }
 
@@ -295,14 +404,16 @@ public class AuthClientUI extends Application {
     }
 
     /**
-     * Met à jour l'indicateur de force du mot de passe.
+     * Met à jour l'indicateur de force d'un mot de passe.
      *
      * @param password mot de passe saisi
+     * @param targetLabel label cible
+     * @param prefix prefixe du texte
      */
-    private void updatePasswordStrength(String password) {
+    private void updatePasswordStrength(String password, Label targetLabel, String prefix) {
         if (password == null || password.isBlank()) {
-            passwordStrengthLabel.setText("Force du mot de passe : -");
-            passwordStrengthLabel.setStyle(
+            targetLabel.setText(prefix + "-");
+            targetLabel.setStyle(
                     "-fx-font-weight: bold;" +
                             "-fx-font-size: 13px;" +
                             "-fx-text-fill: #94a3b8;"
@@ -313,22 +424,22 @@ public class AuthClientUI extends Application {
         String strength = evaluatePasswordStrength(password);
 
         if ("Faible".equals(strength)) {
-            passwordStrengthLabel.setText("Force du mot de passe : Faible");
-            passwordStrengthLabel.setStyle(
+            targetLabel.setText(prefix + "Faible");
+            targetLabel.setStyle(
                     "-fx-font-weight: bold;" +
                             "-fx-font-size: 13px;" +
                             "-fx-text-fill: #ef4444;"
             );
         } else if ("Moyen".equals(strength)) {
-            passwordStrengthLabel.setText("Force du mot de passe : Moyen");
-            passwordStrengthLabel.setStyle(
+            targetLabel.setText(prefix + "Moyen");
+            targetLabel.setStyle(
                     "-fx-font-weight: bold;" +
                             "-fx-font-size: 13px;" +
                             "-fx-text-fill: #f59e0b;"
             );
         } else {
-            passwordStrengthLabel.setText("Force du mot de passe : Fort");
-            passwordStrengthLabel.setStyle(
+            targetLabel.setText(prefix + "Fort");
+            targetLabel.setStyle(
                     "-fx-font-weight: bold;" +
                             "-fx-font-size: 13px;" +
                             "-fx-text-fill: #22c55e;"
@@ -337,12 +448,41 @@ public class AuthClientUI extends Application {
     }
 
     /**
+     * Met à jour le label de confirmation du nouveau mot de passe.
+     */
+    private void updateNewPasswordConfirmation() {
+        String newPassword = newPasswordField.getText();
+        String confirmPassword = confirmNewPasswordField.getText();
+
+        if (confirmPassword == null || confirmPassword.isBlank()) {
+            confirmNewPasswordLabel.setText("Confirmation : -");
+            confirmNewPasswordLabel.setStyle(
+                    "-fx-font-weight: bold;" +
+                            "-fx-font-size: 13px;" +
+                            "-fx-text-fill: #94a3b8;"
+            );
+            return;
+        }
+
+        if (newPassword != null && newPassword.equals(confirmPassword)) {
+            confirmNewPasswordLabel.setText("Confirmation : Les mots de passe correspondent");
+            confirmNewPasswordLabel.setStyle(
+                    "-fx-font-weight: bold;" +
+                            "-fx-font-size: 13px;" +
+                            "-fx-text-fill: #22c55e;"
+            );
+        } else {
+            confirmNewPasswordLabel.setText("Confirmation : Les mots de passe sont differents");
+            confirmNewPasswordLabel.setStyle(
+                    "-fx-font-weight: bold;" +
+                            "-fx-font-size: 13px;" +
+                            "-fx-text-fill: #ef4444;"
+            );
+        }
+    }
+
+    /**
      * Évalue simplement la robustesse du mot de passe.
-     *
-     * Règles simples :
-     * - Faible : trop court ou très peu varié
-     * - Moyen : correct mais incomplet
-     * - Fort : assez long avec plusieurs types de caractères
      *
      * @param password mot de passe
      * @return Faible, Moyen ou Fort
@@ -571,6 +711,52 @@ public class AuthClientUI extends Application {
     }
 
     /**
+     * Appelle l'endpoint change-password avec le token Bearer.
+     */
+    private void changePassword() {
+        try {
+            String token = tokenField.getText();
+
+            if (token == null || token.isBlank()) {
+                resultArea.setText("Token vide. Fais d'abord le login.");
+                return;
+            }
+
+            if (oldPasswordField.getText() == null || oldPasswordField.getText().isBlank()) {
+                resultArea.setText("L'ancien mot de passe est obligatoire.");
+                return;
+            }
+
+            if (newPasswordField.getText() == null || newPasswordField.getText().isBlank()) {
+                resultArea.setText("Le nouveau mot de passe est obligatoire.");
+                return;
+            }
+
+            if (!newPasswordField.getText().equals(confirmNewPasswordField.getText())) {
+                resultArea.setText("La confirmation du nouveau mot de passe est differente.");
+                return;
+            }
+
+            String jsonBody = String.format(
+                    """
+                    {
+                      "oldPassword": "%s",
+                      "newPassword": "%s"
+                    }
+                    """,
+                    escapeJson(oldPasswordField.getText()),
+                    escapeJson(newPasswordField.getText())
+            );
+
+            String response = sendPost(BASE_URL + "/change-password", jsonBody, token);
+            resultArea.setText("CHANGE PASSWORD\n\n" + prettyJson(response));
+
+        } catch (Exception e) {
+            resultArea.setText("Erreur change-password : " + e.getMessage());
+        }
+    }
+
+    /**
      * Vide quelques champs de sortie.
      */
     private void clearFields() {
@@ -578,10 +764,28 @@ public class AuthClientUI extends Application {
         timestampField.clear();
         hmacField.clear();
         tokenField.clear();
+        oldPasswordField.clear();
+        newPasswordField.clear();
+        confirmNewPasswordField.clear();
         resultArea.clear();
         passwordField.clear();
+
         passwordStrengthLabel.setText("Force du mot de passe : -");
         passwordStrengthLabel.setStyle(
+                "-fx-font-weight: bold;" +
+                        "-fx-font-size: 13px;" +
+                        "-fx-text-fill: #94a3b8;"
+        );
+
+        newPasswordStrengthLabel.setText("Force du nouveau mot de passe : -");
+        newPasswordStrengthLabel.setStyle(
+                "-fx-font-weight: bold;" +
+                        "-fx-font-size: 13px;" +
+                        "-fx-text-fill: #94a3b8;"
+        );
+
+        confirmNewPasswordLabel.setText("Confirmation : -");
+        confirmNewPasswordLabel.setStyle(
                 "-fx-font-weight: bold;" +
                         "-fx-font-size: 13px;" +
                         "-fx-text-fill: #94a3b8;"

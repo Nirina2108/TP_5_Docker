@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
+import com.example.auth.dto.ChangePasswordRequest;
 import java.util.Map;
 
 /**
@@ -113,5 +113,18 @@ public class AuthController {
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
         return authService.logout(authorizationHeader);
+    }
+    /**
+     * Change le mot de passe de l'utilisateur connecté.
+     *
+     * @param authorizationHeader header Authorization avec Bearer token
+     * @param request ancien et nouveau mot de passe
+     * @return réponse JSON
+     */
+    @PostMapping("/change-password")
+    public Map<String, Object> changePassword(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody ChangePasswordRequest request) {
+        return authService.changePassword(authorizationHeader, request);
     }
 }

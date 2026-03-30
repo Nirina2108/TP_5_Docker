@@ -1,6 +1,7 @@
 package com.example.auth.service;
 
 import com.example.auth.AuthApplication;
+import com.example.auth.dto.ChangePasswordRequest;
 import com.example.auth.dto.ClientProofRequest;
 import com.example.auth.dto.ClientProofResponse;
 import com.example.auth.dto.LoginRequest;
@@ -24,7 +25,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * Tests du service d'authentification TP3.
+ * Tests du service d'authentification TP5.
  *
  * Cas couverts :
  * - inscription
@@ -36,9 +37,10 @@ import java.util.Map;
  * - utilisateur inconnu
  * - /me avec et sans token
  * - logout
+ * - changement de mot de passe
  *
  * @author Poun
- * @version 3.5
+ * @version 5.0
  */
 @SpringBootTest(classes = AuthApplication.class)
 @ActiveProfiles("test")
@@ -67,6 +69,12 @@ public class AuthServiceTest {
      */
     @Autowired
     private AuthNonceRepository authNonceRepository;
+
+    /**
+     * Service de chiffrement des mots de passe.
+     */
+    @Autowired
+    private PasswordCryptoService passwordCryptoService;
 
     /**
      * Nettoyage avant chaque test.
@@ -438,28 +446,96 @@ public class AuthServiceTest {
      */
     @Test
     void testLoginWrongPassword() {
-        RegisterRequest r = new RegisterRequest();
-        r.setName("Test");
-        r.setEmail("test@gmail.com");
-        r.setPassword("Azerty1234!");
-        authService.register(r);
-
-        LoginRequest request = new LoginRequest();
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Test");
         request.setEmail("test@gmail.com");
-        request.setNonce("test-nonce");
-        request.setTimestamp(System.currentTimeMillis() / 1000);
-        request.setHmac("fake-hmac");
+        request.setPassword("Azerty1234!");
+        authService.register(request);
 
-        Map<String, Object> response = authService.login(request);
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setEmail("test@gmail.com");
+        loginRequest.setNonce("test-nonce");
+        loginRequest.setTimestamp(System.currentTimeMillis() / 1000);
+        loginRequest.setHmac("fake-hmac");
+
+        Map<String, Object> response = authService.login(loginRequest);
 
         Assertions.assertTrue(response.containsKey("error"));
     }
 
     /**
-     * Tests du contrôleur d'authentification TP3.
+     * Teste le changement de mot de passe réussi.
+     */
+    @Test
+    void shouldChangePasswordSuccessfully() {
+        RegisterRequest registerRequest = new RegisterRequest();
+        registerRequest.setName("Poun");
+        registerRequest.setEmail("poun.tp5@test.com");
+        registerRequest.setPassword("Ancien123!");
+
+        authService.register(registerRequest);
+
+        User user = userRepository.findByEmail("poun.tp5@test.com").orElse(null);
+        Assertions.assertNotNull(user);
+
+        user.setToken("token-test-tp5");
+        user.setTokenExpiresAt(LocalDateTime.now().plusMinutes(15));
+        userRepository.save(user);
+
+        ChangePasswordRequest changePasswordRequest = new ChangePasswordRequest();
+        changePasswordRequest.setOldPassword("Ancien123!");
+        changePasswordRequest.setNewPassword("Nouveau123!");
+
+        Map<String, Object> response = authService.changePassword(
+                "Bearer token-test-tp5",
+                changePasswordRequest
+        );
+
+        Assertions.assertEquals("Mot de passe changé avec succès", response.get("message"));
+
+        User updatedUser = userRepository.findByEmail("poun.tp5@test.com").orElse(null);
+        Assertions.assertNotNull(updatedUser);
+
+        String decryptedPassword = passwordCryptoService.decrypt(updatedUser.getPasswordEncrypted());
+        Assertions.assertEquals("Nouveau123!", decryptedPassword);
+    }
+
+    /**
+     * Teste le refus du changement si l'ancien mot de passe est faux.
+     */
+    @Test
+    void shouldRefuseChangePasswordWhenOldPasswordIsWrong() {
+        RegisterRequest registerRequest = new RegisterRequest();
+        registerRequest.setName("Poun");
+        registerRequest.setEmail("poun.tp5.wrong@test.com");
+        registerRequest.setPassword("Ancien123!");
+
+        authService.register(registerRequest);
+
+        User user = userRepository.findByEmail("poun.tp5.wrong@test.com").orElse(null);
+        Assertions.assertNotNull(user);
+
+        user.setToken("token-test-wrong");
+        user.setTokenExpiresAt(LocalDateTime.now().plusMinutes(15));
+        userRepository.save(user);
+
+        ChangePasswordRequest changePasswordRequest = new ChangePasswordRequest();
+        changePasswordRequest.setOldPassword("FauxAncien123!");
+        changePasswordRequest.setNewPassword("Nouveau123!");
+
+        Map<String, Object> response = authService.changePassword(
+                "Bearer token-test-wrong",
+                changePasswordRequest
+        );
+
+        Assertions.assertEquals("Ancien mot de passe incorrect", response.get("error"));
+    }
+
+    /**
+     * Tests du contrôleur d'authentification.
      *
      * @author Poun
-     * @version 3.1
+     * @version 5.0
      */
     @SpringBootTest(classes = AuthApplication.class)
     @AutoConfigureMockMvc

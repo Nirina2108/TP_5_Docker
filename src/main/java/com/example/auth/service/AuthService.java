@@ -1,5 +1,6 @@
 package com.example.auth.service;
 
+import com.example.auth.dto.ChangePasswordRequest;
 import com.example.auth.dto.LoginRequest;
 import com.example.auth.dto.RegisterRequest;
 import com.example.auth.entity.AuthNonce;
@@ -22,8 +23,11 @@ import java.util.UUID;
  * - protection anti-replay avec nonce et timestamp
  * - émission de token temporaire
  *
+ * TP5 :
+ * - changement de mot de passe pour un utilisateur authentifié
+ *
  * @author Poun
- * @version 3.3
+ * @version 5.0
  */
 @Service
 public class AuthService {
@@ -228,6 +232,77 @@ public class AuthService {
         response.put("createdAt", user.getCreatedAt());
         response.put("tokenExpiresAt", user.getTokenExpiresAt());
 
+        return response;
+    }
+
+    /**
+     * Change le mot de passe d'un utilisateur authentifié.
+     *
+     * Règles :
+     * - l'utilisateur doit être connecté
+     * - l'ancien mot de passe doit être correct
+     * - le nouveau mot de passe doit respecter la politique de sécurité
+     * - le nouveau mot de passe est chiffré avec la Master Key
+     *
+     * @param authorizationHeader header Authorization contenant le Bearer token
+     * @param request contient l'ancien et le nouveau mot de passe
+     * @return message de succès ou d'erreur
+     */
+    public Map<String, Object> changePassword(String authorizationHeader, ChangePasswordRequest request) {
+        Map<String, Object> response = new HashMap<>();
+
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            response.put(KEY_ERROR, "Token manquant ou invalide");
+            return response;
+        }
+
+        if (request == null) {
+            response.put(KEY_ERROR, "Requête invalide");
+            return response;
+        }
+
+        if (request.getOldPassword() == null || request.getOldPassword().isBlank()) {
+            response.put(KEY_ERROR, "Ancien mot de passe obligatoire");
+            return response;
+        }
+
+        if (request.getNewPassword() == null || request.getNewPassword().isBlank()) {
+            response.put(KEY_ERROR, "Nouveau mot de passe obligatoire");
+            return response;
+        }
+
+        String token = authorizationHeader.substring(7);
+
+        User user = userRepository.findByToken(token).orElse(null);
+
+        if (user == null) {
+            response.put(KEY_ERROR, "Utilisateur non trouvé pour ce token");
+            return response;
+        }
+
+        if (user.getTokenExpiresAt() == null || user.getTokenExpiresAt().isBefore(LocalDateTime.now())) {
+            response.put(KEY_ERROR, "Token expiré ou invalide");
+            return response;
+        }
+
+        String oldEncryptedPassword = passwordCryptoService.encrypt(request.getOldPassword());
+
+        if (!oldEncryptedPassword.equals(user.getPasswordEncrypted())) {
+            response.put(KEY_ERROR, "Ancien mot de passe incorrect");
+            return response;
+        }
+
+        if (!passwordPolicyValidator.isValid(request.getNewPassword())) {
+            response.put(KEY_ERROR, passwordPolicyValidator.getRulesMessage());
+            return response;
+        }
+
+        String newEncryptedPassword = passwordCryptoService.encrypt(request.getNewPassword());
+        user.setPasswordEncrypted(newEncryptedPassword);
+
+        userRepository.save(user);
+
+        response.put(KEY_MESSAGE, "Mot de passe changé avec succès");
         return response;
     }
 

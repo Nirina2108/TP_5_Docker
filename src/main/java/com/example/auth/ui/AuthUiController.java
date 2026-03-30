@@ -28,7 +28,7 @@ public class AuthUiController {
     /**
      * URL de base de l'API d'authentification.
      */
-    private static final String API_URL = "http://localhost:8082/api/auth";
+    private static final String API_URL = "http://localhost:8000/api/auth";
 
     /**
      * Style rouge pour les messages d'erreur.

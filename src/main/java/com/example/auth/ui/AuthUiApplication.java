@@ -6,8 +6,11 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 /**
- * Classe principale de l'application JavaFX.
- * Elle permet de lancer l'interface graphique d'authentification.
+ * Classe principale de l'application JavaFX TP_5.
+ * Elle lance l'interface graphique d'authentification.
+ *
+ * @author Poun
+ * @version 5.0
  */
 public class AuthUiApplication extends Application {
 
@@ -23,7 +26,7 @@ public class AuthUiApplication extends Application {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/auth-view.fxml"));
         Scene scene = new Scene(loader.load(), 420, 300);
 
-        stage.setTitle("Authentification simple");
+        stage.setTitle("TP_5 - Authentification securisee");
         stage.setScene(scene);
         stage.show();
     }

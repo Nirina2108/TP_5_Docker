@@ -47,3 +47,12 @@ jobs:
 
       - name: Push image vers Docker Hub
         run: docker push nirina2108/tp_5_docker:latest
+          # ✅ Après — tout en une seule commande
+               - name: Build, tests et SonarCloud
+               env:
+                 SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+               run: ./mvnw clean verify sonar:sonar
+                 -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+                 -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+                 -Dsonar.host.url=https://sonarcloud.io
+                 -Dsonar.token=${{ secrets.SONAR_TOKEN }}

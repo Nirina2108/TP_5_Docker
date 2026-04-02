@@ -5,7 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -17,26 +17,40 @@ import java.util.Base64;
  * Ce service existe uniquement pour le TP3 afin de permettre au serveur
  * de retrouver le secret utilisateur et de recalculer un HMAC côté serveur.
  *
- * ✅ Fix java:S5542 — AES utilisé avec le mode CBC et le padding PKCS5Padding.
- * L'IV (vecteur d'initialisation) est généré aléatoirement à chaque chiffrement
- * et stocké en tête du résultat Base64 (16 premiers octets).
+ * ✅ Fix java:S5542 — AES/GCM/NoPadding (mode authentifié, padding inutile).
+ * ✅ Fix java:S2119 — SecureRandom réutilisé via un champ static final.
+ *
+ * Format du résultat : Base64( IV (12 octets) + données chiffrées + tag GCM )
  *
  * @author Poun
- * @version 3.2
+ * @version 3.3
  */
 @Service
 public class PasswordCryptoService {
 
     /**
-     * Algorithme de chiffrement sécurisé avec mode et padding explicites.
-     * ✅ Fix java:S5542 — utilisation de AES/CBC/PKCS5Padding
+     * Algorithme de chiffrement sécurisé.
+     * ✅ Fix java:S5542 — AES/GCM/NoPadding (GCM est un mode authentifié,
+     * il ne nécessite pas de padding et est recommandé par SonarQube).
      */
-    private static final String CIPHER_ALGORITHM = "AES/CBC/PKCS5Padding";
+    private static final String CIPHER_ALGORITHM = "AES/GCM/NoPadding";
 
     /**
-     * Taille de l'IV en octets (16 octets pour AES).
+     * Taille de l'IV recommandée pour GCM : 12 octets (96 bits).
      */
-    private static final int IV_SIZE = 16;
+    private static final int IV_SIZE = 12;
+
+    /**
+     * Longueur du tag d'authentification GCM : 128 bits.
+     */
+    private static final int GCM_TAG_LENGTH = 128;
+
+    /**
+     * Instance SecureRandom réutilisable.
+     * ✅ Fix java:S2119 — objet Random sauvegardé et réutilisé,
+     * pas recréé à chaque appel.
+     */
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /**
      * Clé maître serveur lue depuis application.properties.
@@ -55,7 +69,7 @@ public class PasswordCryptoService {
     @PostConstruct
     public void init() {
         byte[] keyBytes = serverMasterKey.getBytes(StandardCharsets.UTF_8);
-        byte[] finalKey = new byte[IV_SIZE];
+        byte[] finalKey = new byte[16];
 
         for (int i = 0; i < finalKey.length; i++) {
             if (i < keyBytes.length) {
@@ -69,26 +83,26 @@ public class PasswordCryptoService {
     }
 
     /**
-     * Chiffre un texte en AES/CBC/PKCS5Padding puis encode le résultat en Base64.
+     * Chiffre un texte en AES/GCM/NoPadding puis encode le résultat en Base64.
      *
-     * Le format du résultat est : Base64( IV (16 octets) + données chiffrées )
+     * Format : Base64( IV (12 octets) + données chiffrées + tag GCM (16 octets) )
      *
      * @param plainText texte en clair
      * @return texte chiffré encodé en Base64 (IV inclus)
      */
     public String encrypt(String plainText) {
         try {
-            // Génération d'un IV aléatoire à chaque chiffrement
+            // ✅ Fix java:S2119 — utilisation du champ SECURE_RANDOM réutilisable
             byte[] iv = new byte[IV_SIZE];
-            new SecureRandom().nextBytes(iv);
-            IvParameterSpec ivSpec = new IvParameterSpec(iv);
+            SECURE_RANDOM.nextBytes(iv);
 
-            // ✅ Fix java:S5542 — utilisation de la constante CIPHER_ALGORITHM
+            GCMParameterSpec gcmSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
+
             Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
-            cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivSpec);
+            cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, gcmSpec);
             byte[] encryptedBytes = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
 
-            // On préfixe l'IV aux données chiffrées pour pouvoir déchiffrer
+            // On préfixe l'IV aux données chiffrées (+ tag GCM inclus dans encryptedBytes)
             byte[] combined = new byte[IV_SIZE + encryptedBytes.length];
             System.arraycopy(iv, 0, combined, 0, IV_SIZE);
             System.arraycopy(encryptedBytes, 0, combined, IV_SIZE, encryptedBytes.length);
@@ -100,9 +114,9 @@ public class PasswordCryptoService {
     }
 
     /**
-     * Déchiffre un texte Base64 chiffré en AES/CBC/PKCS5Padding.
+     * Déchiffre un texte Base64 chiffré en AES/GCM/NoPadding.
      *
-     * Attend le format : Base64( IV (16 octets) + données chiffrées )
+     * Attend le format : Base64( IV (12 octets) + données chiffrées + tag GCM )
      *
      * @param encryptedText texte chiffré en Base64 (IV inclus)
      * @return texte en clair
@@ -111,17 +125,16 @@ public class PasswordCryptoService {
         try {
             byte[] combined = Base64.getDecoder().decode(encryptedText);
 
-            // Extraction de l'IV depuis les 16 premiers octets
+            // Extraction de l'IV depuis les 12 premiers octets
             byte[] iv = new byte[IV_SIZE];
             byte[] encryptedBytes = new byte[combined.length - IV_SIZE];
             System.arraycopy(combined, 0, iv, 0, IV_SIZE);
             System.arraycopy(combined, IV_SIZE, encryptedBytes, 0, encryptedBytes.length);
 
-            IvParameterSpec ivSpec = new IvParameterSpec(iv);
+            GCMParameterSpec gcmSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
 
-            // ✅ Fix java:S5542 — utilisation de la constante CIPHER_ALGORITHM
             Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
-            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivSpec);
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, gcmSpec);
             byte[] decryptedBytes = cipher.doFinal(encryptedBytes);
 
             return new String(decryptedBytes, StandardCharsets.UTF_8);

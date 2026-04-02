@@ -770,5 +770,7 @@ public class AuthServiceTest {
 
             Assertions.assertEquals(401, result.getResponse().getStatus());
         }
+
     }
+
 }

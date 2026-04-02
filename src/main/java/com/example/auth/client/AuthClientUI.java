@@ -602,6 +602,10 @@ public class AuthClientUI extends Application {
             String response = sendPost(BASE_URL + "/register", jsonBody, null);
             resultArea.setText("REGISTER\n\n" + prettyJson(response));
 
+        } catch (InterruptedException e) {
+            // ✅ Fix java:S2142 — Restore interrupted status
+            Thread.currentThread().interrupt();
+            resultArea.setText("Erreur register : " + e.getMessage());
         } catch (Exception e) {
             resultArea.setText("Erreur register : " + e.getMessage());
         }
@@ -632,6 +636,10 @@ public class AuthClientUI extends Application {
 
             resultArea.setText("CLIENT-PROOF\n\n" + prettyJson(response));
 
+        } catch (InterruptedException e) {
+            // ✅ Fix java:S2142 — Restore interrupted status
+            Thread.currentThread().interrupt();
+            resultArea.setText("Erreur client-proof : " + e.getMessage());
         } catch (Exception e) {
             resultArea.setText("Erreur client-proof : " + e.getMessage());
         }
@@ -665,6 +673,10 @@ public class AuthClientUI extends Application {
 
             resultArea.setText("LOGIN\n\n" + prettyJson(response));
 
+        } catch (InterruptedException e) {
+            // ✅ Fix java:S2142 — Restore interrupted status
+            Thread.currentThread().interrupt();
+            resultArea.setText("Erreur login : " + e.getMessage());
         } catch (Exception e) {
             resultArea.setText("Erreur login : " + e.getMessage());
         }
@@ -685,6 +697,10 @@ public class AuthClientUI extends Application {
             String response = sendGet(BASE_URL + "/me", token);
             resultArea.setText("/ME\n\n" + prettyJson(response));
 
+        } catch (InterruptedException e) {
+            // ✅ Fix java:S2142 — Restore interrupted status
+            Thread.currentThread().interrupt();
+            resultArea.setText("Erreur /me : " + e.getMessage());
         } catch (Exception e) {
             resultArea.setText("Erreur /me : " + e.getMessage());
         }
@@ -705,6 +721,10 @@ public class AuthClientUI extends Application {
             String response = sendPost(BASE_URL + "/logout", "{}", token);
             resultArea.setText("LOGOUT\n\n" + prettyJson(response));
 
+        } catch (InterruptedException e) {
+            // ✅ Fix java:S2142 — Restore interrupted status
+            Thread.currentThread().interrupt();
+            resultArea.setText("Erreur logout : " + e.getMessage());
         } catch (Exception e) {
             resultArea.setText("Erreur logout : " + e.getMessage());
         }
@@ -751,6 +771,10 @@ public class AuthClientUI extends Application {
             String response = sendPost(BASE_URL + "/change-password", jsonBody, token);
             resultArea.setText("CHANGE PASSWORD\n\n" + prettyJson(response));
 
+        } catch (InterruptedException e) {
+            // ✅ Fix java:S2142 — Restore interrupted status
+            Thread.currentThread().interrupt();
+            resultArea.setText("Erreur change-password : " + e.getMessage());
         } catch (Exception e) {
             resultArea.setText("Erreur change-password : " + e.getMessage());
         }

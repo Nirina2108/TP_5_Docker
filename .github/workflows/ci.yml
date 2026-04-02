@@ -32,12 +32,6 @@ jobs:
       - name: Build et tests Maven
         run: ./mvnw clean verify
 
-      - name: Vérifier jacoco.xml
-        run: |
-          echo "=== Contenu de target/site/jacoco ==="
-          ls -la target/site/jacoco/ || echo "❌ Dossier jacoco introuvable"
-          cat target/site/jacoco/jacoco.xml | head -20 || echo "❌ jacoco.xml introuvable"
-
       - name: Analyse SonarCloud
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -47,7 +41,8 @@ jobs:
             -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+            -Dsonar.coverage.jacoco.xmlReportPaths=$(pwd)/target/site/jacoco/jacoco.xml \
+            -Dsonar.java.coveragePlugin=jacoco
 
       - name: Build image Docker
         run: docker build -t nirina2108/tp_5_docker:latest .

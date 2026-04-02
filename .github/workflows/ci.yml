@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - tp5-dev
+      - v5-final-ok
   pull_request:
     branches:
       - main

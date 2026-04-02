@@ -27,7 +27,7 @@ import java.util.UUID;
  * - changement de mot de passe pour un utilisateur authentifié
  *
  * @author Poun
- * @version 5.0
+ * @version 5.1
  */
 @Service
 public class AuthService {
@@ -49,6 +49,9 @@ public class AuthService {
 
     // ✅ Fix java:S1192 — Constante pour le préfixe Bearer dupliqué 3 fois
     private static final String BEARER_PREFIX = "Bearer ";
+
+    // ✅ Fix java:S1192 — Constante pour le message d'erreur token dupliqué 3 fois
+    private static final String MSG_TOKEN_INVALIDE = "Token manquant ou invalide";
 
     /**
      * Repository utilisateur.
@@ -210,9 +213,9 @@ public class AuthService {
     public Map<String, Object> getMe(String authorizationHeader) {
         Map<String, Object> response = new HashMap<>();
 
-        // ✅ Fix java:S1192 — utilisation de la constante BEARER_PREFIX
+        // ✅ Fix java:S1192 — utilisation de BEARER_PREFIX et MSG_TOKEN_INVALIDE
         if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER_PREFIX)) {
-            response.put(KEY_ERROR, "Token manquant ou invalide");
+            response.put(KEY_ERROR, MSG_TOKEN_INVALIDE);
             return response;
         }
 
@@ -255,9 +258,9 @@ public class AuthService {
     public Map<String, Object> changePassword(String authorizationHeader, ChangePasswordRequest request) {
         Map<String, Object> response = new HashMap<>();
 
-        // ✅ Fix java:S1192 — utilisation de la constante BEARER_PREFIX
+        // ✅ Fix java:S1192 — utilisation de BEARER_PREFIX et MSG_TOKEN_INVALIDE
         if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER_PREFIX)) {
-            response.put(KEY_ERROR, "Token manquant ou invalide");
+            response.put(KEY_ERROR, MSG_TOKEN_INVALIDE);
             return response;
         }
 
@@ -290,9 +293,12 @@ public class AuthService {
             return response;
         }
 
-        String oldEncryptedPassword = passwordCryptoService.encrypt(request.getOldPassword());
-
-        if (!oldEncryptedPassword.equals(user.getPasswordEncrypted())) {
+        // ✅ Fix compatibilité AES/CBC — on déchiffre le mot de passe stocké et on compare en clair.
+        // encrypt() avec AES/CBC génère un IV aléatoire à chaque appel :
+        // encrypt(x) != encrypt(x) à deux appels différents.
+        // La seule comparaison fiable est : decrypt(stored) == oldPassword.
+        String decryptedStoredPassword = passwordCryptoService.decrypt(user.getPasswordEncrypted());
+        if (!decryptedStoredPassword.equals(request.getOldPassword())) {
             response.put(KEY_ERROR, "Ancien mot de passe incorrect");
             return response;
         }
@@ -320,9 +326,9 @@ public class AuthService {
     public Map<String, Object> logout(String authorizationHeader) {
         Map<String, Object> response = new HashMap<>();
 
-        // ✅ Fix java:S1192 — utilisation de la constante BEARER_PREFIX
+        // ✅ Fix java:S1192 — utilisation de BEARER_PREFIX et MSG_TOKEN_INVALIDE
         if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER_PREFIX)) {
-            response.put(KEY_ERROR, "Token manquant ou invalide");
+            response.put(KEY_ERROR, MSG_TOKEN_INVALIDE);
             return response;
         }
 

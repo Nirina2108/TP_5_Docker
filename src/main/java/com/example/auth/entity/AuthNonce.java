@@ -68,9 +68,11 @@ public class AuthNonce {
     private LocalDateTime createdAt;
 
     /**
-     * Constructeur vide.
+     * Constructeur vide requis par JPA.
+     * ✅ Fix java:S1186 — commentaire explicatif ajouté
      */
     public AuthNonce() {
+        // Requis par JPA pour l'instanciation des entités
     }
 
     /**

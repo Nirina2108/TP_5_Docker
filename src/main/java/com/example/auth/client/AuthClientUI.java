@@ -40,6 +40,12 @@ import java.net.http.HttpResponse;
  */
 public class AuthClientUI extends Application {
 
+    // ✅ Fix java:S1192 — Constantes pour les littéraux dupliqués
+    private static final String LABEL_CONFIRMATION_DEFAULT = "Confirmation : -";
+    private static final String STRENGTH_FAIBLE = "Faible";
+    private static final String STRENGTH_MOYEN = "Moyen";
+    private static final String MSG_TOKEN_VIDE = "Token vide. Fais d'abord le login.";
+
     /**
      * URL de base de l'API.
      */
@@ -118,7 +124,7 @@ public class AuthClientUI extends Application {
     /**
      * Label confirmation nouveau mot de passe.
      */
-    private final Label confirmNewPasswordLabel = new Label("Confirmation : -");
+    private final Label confirmNewPasswordLabel = new Label(LABEL_CONFIRMATION_DEFAULT);
 
     /**
      * Zone d'affichage des réponses.
@@ -423,15 +429,16 @@ public class AuthClientUI extends Application {
 
         String strength = evaluatePasswordStrength(password);
 
-        if ("Faible".equals(strength)) {
-            targetLabel.setText(prefix + "Faible");
+        // ✅ Fix java:S1192 — utilisation des constantes STRENGTH_FAIBLE et STRENGTH_MOYEN
+        if (STRENGTH_FAIBLE.equals(strength)) {
+            targetLabel.setText(prefix + STRENGTH_FAIBLE);
             targetLabel.setStyle(
                     "-fx-font-weight: bold;" +
                             "-fx-font-size: 13px;" +
                             "-fx-text-fill: #ef4444;"
             );
-        } else if ("Moyen".equals(strength)) {
-            targetLabel.setText(prefix + "Moyen");
+        } else if (STRENGTH_MOYEN.equals(strength)) {
+            targetLabel.setText(prefix + STRENGTH_MOYEN);
             targetLabel.setStyle(
                     "-fx-font-weight: bold;" +
                             "-fx-font-size: 13px;" +
@@ -455,7 +462,8 @@ public class AuthClientUI extends Application {
         String confirmPassword = confirmNewPasswordField.getText();
 
         if (confirmPassword == null || confirmPassword.isBlank()) {
-            confirmNewPasswordLabel.setText("Confirmation : -");
+            // ✅ Fix java:S1192 — utilisation de la constante LABEL_CONFIRMATION_DEFAULT
+            confirmNewPasswordLabel.setText(LABEL_CONFIRMATION_DEFAULT);
             confirmNewPasswordLabel.setStyle(
                     "-fx-font-weight: bold;" +
                             "-fx-font-size: 13px;" +
@@ -511,11 +519,13 @@ public class AuthClientUI extends Application {
         }
 
         if (score <= 2) {
-            return "Faible";
+            // ✅ Fix java:S1192 — utilisation de la constante STRENGTH_FAIBLE
+            return STRENGTH_FAIBLE;
         }
 
         if (score <= 4) {
-            return "Moyen";
+            // ✅ Fix java:S1192 — utilisation de la constante STRENGTH_MOYEN
+            return STRENGTH_MOYEN;
         }
 
         return "Fort";
@@ -690,7 +700,8 @@ public class AuthClientUI extends Application {
             String token = tokenField.getText();
 
             if (token == null || token.isBlank()) {
-                resultArea.setText("Token vide. Fais d'abord le login.");
+                // ✅ Fix java:S1192 — utilisation de la constante MSG_TOKEN_VIDE
+                resultArea.setText(MSG_TOKEN_VIDE);
                 return;
             }
 
@@ -714,7 +725,8 @@ public class AuthClientUI extends Application {
             String token = tokenField.getText();
 
             if (token == null || token.isBlank()) {
-                resultArea.setText("Token vide. Fais d'abord le login.");
+                // ✅ Fix java:S1192 — utilisation de la constante MSG_TOKEN_VIDE
+                resultArea.setText(MSG_TOKEN_VIDE);
                 return;
             }
 
@@ -738,7 +750,8 @@ public class AuthClientUI extends Application {
             String token = tokenField.getText();
 
             if (token == null || token.isBlank()) {
-                resultArea.setText("Token vide. Fais d'abord le login.");
+                // ✅ Fix java:S1192 — utilisation de la constante MSG_TOKEN_VIDE
+                resultArea.setText(MSG_TOKEN_VIDE);
                 return;
             }
 
@@ -808,7 +821,8 @@ public class AuthClientUI extends Application {
                         "-fx-text-fill: #94a3b8;"
         );
 
-        confirmNewPasswordLabel.setText("Confirmation : -");
+        // ✅ Fix java:S1192 — utilisation de la constante LABEL_CONFIRMATION_DEFAULT
+        confirmNewPasswordLabel.setText(LABEL_CONFIRMATION_DEFAULT);
         confirmNewPasswordLabel.setStyle(
                 "-fx-font-weight: bold;" +
                         "-fx-font-size: 13px;" +

@@ -47,6 +47,9 @@ public class AuthService {
      */
     private static final int TOKEN_DURATION_MINUTES = 15;
 
+    // ✅ Fix java:S1192 — Constante pour le préfixe Bearer dupliqué 3 fois
+    private static final String BEARER_PREFIX = "Bearer ";
+
     /**
      * Repository utilisateur.
      */
@@ -207,12 +210,13 @@ public class AuthService {
     public Map<String, Object> getMe(String authorizationHeader) {
         Map<String, Object> response = new HashMap<>();
 
-        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+        // ✅ Fix java:S1192 — utilisation de la constante BEARER_PREFIX
+        if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER_PREFIX)) {
             response.put(KEY_ERROR, "Token manquant ou invalide");
             return response;
         }
 
-        String token = authorizationHeader.substring(7);
+        String token = authorizationHeader.substring(BEARER_PREFIX.length());
 
         User user = userRepository.findByToken(token).orElse(null);
 
@@ -251,7 +255,8 @@ public class AuthService {
     public Map<String, Object> changePassword(String authorizationHeader, ChangePasswordRequest request) {
         Map<String, Object> response = new HashMap<>();
 
-        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+        // ✅ Fix java:S1192 — utilisation de la constante BEARER_PREFIX
+        if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER_PREFIX)) {
             response.put(KEY_ERROR, "Token manquant ou invalide");
             return response;
         }
@@ -271,7 +276,7 @@ public class AuthService {
             return response;
         }
 
-        String token = authorizationHeader.substring(7);
+        String token = authorizationHeader.substring(BEARER_PREFIX.length());
 
         User user = userRepository.findByToken(token).orElse(null);
 
@@ -315,12 +320,13 @@ public class AuthService {
     public Map<String, Object> logout(String authorizationHeader) {
         Map<String, Object> response = new HashMap<>();
 
-        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+        // ✅ Fix java:S1192 — utilisation de la constante BEARER_PREFIX
+        if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER_PREFIX)) {
             response.put(KEY_ERROR, "Token manquant ou invalide");
             return response;
         }
 
-        String token = authorizationHeader.substring(7);
+        String token = authorizationHeader.substring(BEARER_PREFIX.length());
 
         User user = userRepository.findByToken(token).orElse(null);
 

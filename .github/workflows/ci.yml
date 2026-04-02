@@ -29,16 +29,14 @@ jobs:
       - name: Donner les droits a mvnw
         run: chmod +x mvnw
 
-      - name: Build et tests Maven
-        run: ./mvnw clean verify
-
-      - name: Analyse SonarCloud
-        run: ./mvnw sonar:sonar -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} -Dsonar.host.url=https://sonarcloud.io -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+      - name: Build, tests et SonarCloud
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./mvnw clean verify sonar:sonar -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} -Dsonar.host.url=https://sonarcloud.io -Dsonar.token=${{ secrets.SONAR_TOKEN }}
 
       - name: Build image Docker
         run: docker build -t nirina2108/tp_5_docker:latest .
 
-      # ✅ Étapes ajoutées pour Docker Hub
       - name: Connexion à Docker Hub
         uses: docker/login-action@v3
         with:
@@ -47,12 +45,3 @@ jobs:
 
       - name: Push image vers Docker Hub
         run: docker push nirina2108/tp_5_docker:latest
-          # ✅ Après — tout en une seule commande
-               - name: Build, tests et SonarCloud
-               env:
-                 SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-               run: ./mvnw clean verify sonar:sonar
-                 -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
-                 -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-                 -Dsonar.host.url=https://sonarcloud.io
-                 -Dsonar.token=${{ secrets.SONAR_TOKEN }}

@@ -32,6 +32,13 @@ jobs:
       - name: Build et tests Maven
         run: ./mvnw clean verify
 
+      - name: Debug Sonar Token
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          echo "Token length: ${#SONAR_TOKEN}"
+          curl -u $SONAR_TOKEN: https://sonarcloud.io/api/authentication/validate
+
       - name: Analyse SonarCloud
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
